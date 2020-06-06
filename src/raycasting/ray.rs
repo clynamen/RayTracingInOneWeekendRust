@@ -2,6 +2,7 @@ use nalgebra::Vector3;
 
 type Vector3f = Vector3<f32>;
 
+#[derive(Debug)]
 pub struct Ray {
     pub origin: Vector3f,
     pub direction: Vector3f,
@@ -16,4 +17,5 @@ impl Ray {
 pub struct HitPoint {
     pub position: Vector3f,
     pub normal: Vector3f,
+    pub front_face: bool
 }
