@@ -1,5 +1,4 @@
 use crate::types::{Size2i, Vector2i, Rgb8};
-use color::Rgb;
 use std::fmt::*;
 
 #[derive(Debug)]

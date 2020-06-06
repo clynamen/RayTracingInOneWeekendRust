@@ -1,8 +1,10 @@
 use crate::types::{Size2i, Vector2i, Vector3f, Rgb8};
-use crate::types::vector3f_to_rgb8;
+use crate::types::{vector3f_to_rgb8, normal3f_to_rgb8};
 use crate::raycasting::ray::Ray;
 use crate::image::image::Image;
 use super::viewport::Viewport;
+use crate::geom::sphere::Sphere;
+use crate::geom::sphere::hit_sphere;
 
 pub struct Renderer {
     viewport: Viewport
@@ -11,7 +13,7 @@ pub struct Renderer {
 impl Renderer {
 
     pub fn new() -> Renderer {
-        let viewport = Viewport::new_by_width(16.0/9.0, 100);
+        let viewport = Viewport::new_by_width(16.0/9.0, 300);
         Renderer {
             viewport: viewport
         }
@@ -25,7 +27,17 @@ impl Renderer {
     }
 
     fn eval_ray_color(&self, r: &Ray) -> Rgb8 {
-        self.eval_background_color(r)
+        let sphere = Sphere {
+            origin: Vector3f::new(0f32, 0f32, -2f32),
+            radius: 1f32
+        };
+        let sphere_hitpoint = hit_sphere(&sphere, r);
+        match sphere_hitpoint {
+            Some(hitpoint) => {
+                normal3f_to_rgb8(hitpoint.normal)
+            },
+            None => self.eval_background_color(r)
+        }
     }
 
     pub fn run(&self) -> Image {

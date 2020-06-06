@@ -1,5 +1,5 @@
 use crate::raycasting::ray::Ray;
-use crate::types::{Size2i, Vector3f};
+use crate::types::{Vector3f};
 
 pub struct Viewport {
     width: i32,

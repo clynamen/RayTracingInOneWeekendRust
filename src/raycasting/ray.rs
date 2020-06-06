@@ -12,3 +12,8 @@ impl Ray {
         self.origin + self.direction * t
     }
 }
+
+pub struct HitPoint {
+    pub position: Vector3f,
+    pub normal: Vector3f,
+}
