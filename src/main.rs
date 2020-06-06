@@ -1,5 +1,6 @@
 extern crate color;
 extern crate nalgebra;
+extern crate rand;
 
 mod geom;
 mod image;

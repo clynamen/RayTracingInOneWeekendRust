@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 nalgebra = "0.21.0"
 color-rs = "0.5.0"
+rand = "0.7.3"

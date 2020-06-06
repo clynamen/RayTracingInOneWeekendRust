@@ -2,6 +2,7 @@ use crate::raycasting::ray::Ray;
 use crate::renderer::viewport::Viewport;
 use crate::types::Vector2i;
 use crate::types::Vector3f;
+use rand::Rng;
 
 pub struct Camera {
     pub origin: Vector3f,
@@ -19,10 +20,16 @@ impl Camera {
     }
 
     pub fn get_ray_from_image_xy(&self, xy: Vector2i) -> Ray {
-        self.get_ray_from_image_yx(xy.y, xy.x)
+        self.get_ray_from_image_yx(xy.y as f32, xy.x as f32)
     }
 
-    pub fn get_ray_from_image_yx(&self, image_y: i32, image_x: i32) -> Ray {
+    pub fn get_random_ray_from_image_xy(&self, xy: Vector2i) -> Ray {
+        let mut rng = rand::thread_rng();
+        self.get_ray_from_image_yx(xy.y as f32 + rng.gen::<f32>() - 0.5f32,
+                                   xy.x as f32 + rng.gen::<f32>() - 0.5f32)
+    }
+
+    pub fn get_ray_from_image_yx(&self, image_y: f32, image_x: f32) -> Ray {
         let image_v = self.viewport.to_image_v(image_y);
         let image_u = self.viewport.to_image_u(image_x);
         let direction: Vector3f = image_u * self.viewport.horizontal()

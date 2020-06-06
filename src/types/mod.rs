@@ -18,6 +18,14 @@ pub fn vector3f_to_rgb8(v: Vector3f) -> Rgb8 {
                (v.z*255 as f32) as u8)
 }
 
+pub fn rgb8_to_vector3f(rgb: Rgb8) -> Vector3f {
+    Vector3f::new(
+        rgb.r as f32 / 255.0f32,
+        rgb.g as f32 / 255.0f32,
+        rgb.b as f32 / 255.0f32,
+    )
+}
+
 pub fn normal3f_to_rgb8(v: Vector3f) -> Rgb8 {
     Rgb8::new( ( (v.x/2.0+0.5)*255 as f32) as u8, 
                ( (v.y/2.0+0.5)*255 as f32) as u8,

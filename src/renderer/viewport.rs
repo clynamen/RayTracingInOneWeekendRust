@@ -6,13 +6,11 @@ pub struct Viewport {
 }
 
 impl Viewport {
-    pub fn to_image_v(&self, image_y: i32) -> f32 {
-        assert!(image_y >= 0 && image_y < self.image_height());
+    pub fn to_image_v(&self, image_y: f32) -> f32 {
         image_y as f32 / self.image_height() as f32 - 0.5
     }
 
-    pub fn to_image_u(&self, image_x: i32) -> f32 {
-        assert!(image_x >= 0 && image_x < self.image_width());
+    pub fn to_image_u(&self, image_x: f32) -> f32 {
         image_x as f32 / self.image_width() as f32 - 0.5
     }
 
