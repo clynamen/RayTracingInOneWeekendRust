@@ -11,9 +11,11 @@ mod types;
 use crate::geom::hittable::Hittable;
 use crate::geom::sphere::Sphere;
 use crate::types::Vector3f;
+use crate::renderer::camera::Camera;
 
 fn main() {
     let renderer = renderer::renderer::Renderer::new();
+    let camera = Camera::new();
 
     let sphere1 = Sphere {
         origin: Vector3f::new(0f32, 0f32, -2f32),
@@ -30,7 +32,7 @@ fn main() {
         Box::new(sphere1), 
     ];
 
-    let image = renderer.run(&hittables);
+    let image = renderer.run(&camera, &hittables);
     ppm::save_image_to_ppm(
         image.data.as_slice(),
         image.size.width(),
