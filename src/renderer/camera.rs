@@ -11,8 +11,8 @@ pub struct Camera {
 
 impl Camera {
 
-    pub fn new() -> Camera {
-        let viewport = Viewport::new_by_width(16.0 / 9.0, 250);
+    pub fn new(width: i32) -> Camera {
+        let viewport = Viewport::new_by_width(16.0 / 9.0, width);
         Camera {
             origin: Vector3f::new(0f32, 0f32, 0f32),
             viewport: viewport,

@@ -3,13 +3,24 @@ use crate::image::image::Image;
 use crate::raycasting::ray::Ray;
 use crate::renderer::camera::Camera;
 use crate::types::{normal3f_to_rgb8, vector3f_to_rgb8, rgb8_to_vector3f};
-use crate::types::{Rgb8, Size2i, Vector2i, Vector3f};
+use crate::types::{Rgb8, Size2i, Vector2i, Vector3f, scale_rgb8};
 use std::boxed::Box;
 use std::vec::Vec;
+use rand::Rng;
+
+pub fn random_in_unit_sphere() -> Vector3f {
+    let mut rng = rand::thread_rng();
+
+    let x = rng.gen_range(-1.0, 1.0);
+    let y = rng.gen_range(-1.0, 1.0);
+    let z = rng.gen_range(-1.0, 1.0);
+    Vector3f::new(x, y, z).normalize()
+}
 
 pub struct RendererSettings {
     antialiasing_on: bool,
     antialiasing_samples: u32,
+    max_depth: u32
 }
 
 pub struct Renderer {
@@ -21,25 +32,39 @@ impl Renderer {
         Renderer {
             settings: RendererSettings {
                 antialiasing_on: true,
-                antialiasing_samples: 50,
+                antialiasing_samples: 100,
+                max_depth: 3
             },
         }
     }
 
-    fn eval_background_color(&self, r: &Ray) -> Rgb8 {
+    fn eval_background_color(&self, r: &Ray) -> Vector3f {
         let unit_direction = r.direction.normalize();
         let t = 0.5 * (unit_direction.y + 1.0);
-        let color = (1.0 - t) * Vector3f::new(1.0, 1.0, 1.0) + t * Vector3f::new(0.5, 0.7, 1.0);
-        vector3f_to_rgb8(color)
+        let color =  (1.0 - t)
+             * Vector3f::new(1.0, 1.0, 1.0) +
+             t * Vector3f::new(0.5, 0.7, 1.0) ;
+        color
     }
 
-    fn eval_ray_color(&self, r: &Ray, hittables: &Vec<Box<dyn Hittable>>) -> Rgb8 {
+    fn eval_ray_color(&self, r: &Ray, hittables: &Vec<Box<dyn Hittable>>, remaining_depth: u32) -> Vector3f {
         let mut color = self.eval_background_color(r);
-        for hittable in hittables {
-            let sphere_hitpoint = hittable.ray_intersaction(r);
-            match sphere_hitpoint {
-                Some(hitpoint) => color = normal3f_to_rgb8(hitpoint.normal),
-                None => {}
+        if remaining_depth == 0 {
+            color = Vector3f::new(0.0f32, 0.0f32, 0.0f32)
+        } else {
+            for hittable in hittables {
+                let sphere_hitpoint = hittable.ray_intersaction(r);
+                match sphere_hitpoint {
+                    Some(hitpoint) => {
+                        let new_target = hitpoint.position + hitpoint.normal + random_in_unit_sphere();
+                        let new_ray = Ray{
+                            origin: hitpoint.position, 
+                            direction: new_target - hitpoint.position
+                        };
+                        color = self.eval_ray_color(&new_ray, hittables, remaining_depth-1) * 0.9f32;
+                    },
+                    None => {}
+                }
             }
         }
         color
@@ -55,13 +80,14 @@ impl Renderer {
             let mut pixel_color_vector = Vector3f::zeros();
             for _i in 0..self.settings.antialiasing_samples {
                 let ray = camera.get_random_ray_from_image_xy(pixel_position);
-                let sample_color = self.eval_ray_color(&ray, &hittables);
-                pixel_color_vector += rgb8_to_vector3f(sample_color);
+                let sample_color = self.eval_ray_color(&ray, &hittables, self.settings.max_depth);
+                pixel_color_vector += sample_color;
             }
             vector3f_to_rgb8(pixel_color_vector / self.settings.antialiasing_samples as f32)
         } else {
             let ray = camera.get_ray_from_image_xy(pixel_position);
-            self.eval_ray_color(&ray, &hittables)
+            let pixel_color_vector = self.eval_ray_color(&ray, &hittables, self.settings.max_depth);
+            vector3f_to_rgb8(pixel_color_vector)
         }
     }
 

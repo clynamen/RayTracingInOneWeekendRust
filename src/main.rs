@@ -16,7 +16,7 @@ use crate::renderer::camera::Camera;
 
 fn main() {
     let renderer = renderer::renderer::Renderer::new();
-    let camera = Camera::new();
+    let camera = Camera::new(300);
 
     let sphere1 = Sphere {
         origin: Vector3f::new(0f32, 0f32, -2f32),
