@@ -23,6 +23,9 @@ impl Image {
         }
     }
 
+    /*
+        origin: upper left corner
+    */
     pub fn set_pixel(&mut self, position: Vector2i, rgb: Rgb8) {
         assert!(position.y >= 0 && position.y < self.size.height());
         assert!(position.x >= 0 && position.x < self.size.width());

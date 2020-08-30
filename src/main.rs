@@ -19,18 +19,18 @@ fn main() {
     let camera = Camera::new(300);
 
     let sphere1 = Sphere {
-        origin: Vector3f::new(0f32, 0f32, -2f32),
+        origin: Vector3f::new(0f32, 0f32, -2.0f32),
         radius: 0.5f32,
     };
 
     let sphere2 = Sphere {
-        origin: Vector3f::new(0f32, -10f32, -10f32),
-        radius: 10f32,
+        origin: Vector3f::new(0f32, -2f32, -2f32),
+        radius: 2f32,
     };
 
     let hittables: Vec<Box<dyn Hittable>> = vec![
-        Box::new(sphere2),
         Box::new(sphere1), 
+        Box::new(sphere2),
     ];
 
     let image = renderer.run(&camera, &hittables);

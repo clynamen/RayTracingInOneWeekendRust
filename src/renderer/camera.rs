@@ -14,7 +14,7 @@ impl Camera {
     pub fn new(width: i32) -> Camera {
         let viewport = Viewport::new_by_width(16.0 / 9.0, width);
         Camera {
-            origin: Vector3f::new(0f32, 0f32, 0f32),
+            origin: Vector3f::new(0.0f32, 0.0f32, 0f32),
             viewport: viewport,
         }
     }
@@ -29,12 +29,17 @@ impl Camera {
                                    xy.x as f32 + rng.gen::<f32>() - 0.5f32)
     }
 
+    /// get a ray from a pixel in the image (between (0,0) and (image_y, image_x))
+    /// ray x will be between (-viewport_width/2, +viewport_width/2)
+    /// y from image (0, image_y) is mapped from  to (viewport_height/2, -viewport_height/2)
+    /// origin at top left
+    /// ray exit at camera -z
     pub fn get_ray_from_image_yx(&self, image_y: f32, image_x: f32) -> Ray {
         let image_v = self.viewport.to_image_v(image_y);
         let image_u = self.viewport.to_image_u(image_x);
         let direction: Vector3f = image_u * self.viewport.horizontal()
             + image_v * self.viewport.vertical()
-            - self.front() * self.focal_length();
+            + self.front() * self.focal_length();
         Ray {
             origin: self.origin,
             direction: direction,
@@ -47,13 +52,6 @@ impl Camera {
 
     pub fn focal_length(&self) -> f32 {
         1.0
-    }
-
-    pub fn lower_left_corner(&self) -> Vector3f {
-        self.origin
-            - self.viewport.horizontal() / 2f32
-            - self.viewport.vertical()   / 2f32
-            - Vector3f::new(0f32, 0f32, self.focal_length())
     }
 
 }

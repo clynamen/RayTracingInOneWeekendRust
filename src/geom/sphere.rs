@@ -14,16 +14,31 @@ pub fn hit_sphere(sphere: &Sphere, ray: &Ray) -> Option<HitPoint> {
     let c = oc.dot(&oc) - sphere.radius*sphere.radius;
     let discriminant = b*b - 4.0f32 * a * c;
     if discriminant > 0.0f32 {
-        let t =  (-b - discriminant.sqrt() ) / (2.0*a);
-        let hit_position = ray.direction * t;
-        let normal = (hit_position - sphere.origin).normalize();
-        let is_front_face = normal.dot(&ray.direction) > 0f32;
-        let hitpoint = HitPoint{
-            position: hit_position,
-            normal: normal,
-            front_face: is_front_face
-        };
-        Some(hitpoint)
+        let t1 = (-b - discriminant.sqrt() ) / (2.0*a);
+        let t2 = (-b + discriminant.sqrt() ) / (2.0*a);
+        let t1_hit_position = ray.direction * t1;
+        let t2_hit_position = ray.direction * t2;
+
+        let t1_after_ray_origin = (t1_hit_position-ray.origin).dot(&ray.direction) > 0.0f32;
+        let t2_after_ray_origin = (t2_hit_position-ray.origin).dot(&ray.direction) > 0.0f32;
+
+        if t1_after_ray_origin || t2_after_ray_origin {
+            let hit_position = if t1_after_ray_origin {
+                t1_hit_position
+            } else {
+                t2_hit_position
+            };
+            let normal = (hit_position - sphere.origin).normalize();
+            let is_front_face = normal.dot(&ray.direction) > 0f32;
+            let hitpoint = HitPoint{
+                position: hit_position,
+                normal: normal,
+                front_face: is_front_face
+            };
+            Some(hitpoint)
+        } else {
+            None
+        }
     } else {
         None
     }

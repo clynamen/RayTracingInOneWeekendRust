@@ -16,6 +16,7 @@ impl Ray {
 
 pub struct HitPoint {
     pub position: Vector3f,
+    /// normalized vector
     pub normal: Vector3f,
     pub front_face: bool
 }
