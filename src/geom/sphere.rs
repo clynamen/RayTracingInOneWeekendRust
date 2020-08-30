@@ -7,7 +7,7 @@ pub struct Sphere {
    pub radius: f32
 }
 
-pub fn hit_sphere(sphere: &Sphere, ray: &Ray) -> Option<HitPoint> {
+pub fn hit_sphere(sphere: &Sphere, ray: &Ray, t_min:f32, t_max:f32) -> Option<HitPoint> {
     let oc = ray.origin - sphere.origin;
     let a = ray.direction.dot(&ray.direction);
     let b = 2.0 * oc.dot(&ray.direction);
@@ -19,8 +19,11 @@ pub fn hit_sphere(sphere: &Sphere, ray: &Ray) -> Option<HitPoint> {
         let t1_hit_position = ray.direction * t1;
         let t2_hit_position = ray.direction * t2;
 
-        let t1_after_ray_origin = (t1_hit_position-ray.origin).dot(&ray.direction) > 0.0f32;
-        let t2_after_ray_origin = (t2_hit_position-ray.origin).dot(&ray.direction) > 0.0f32;
+        // let t1_after_ray_origin = (t1_hit_position-ray.origin).dot(&ray.direction) > 0.0f32;
+        // let t2_after_ray_origin = (t2_hit_position-ray.origin).dot(&ray.direction) > 0.0f32;
+        let t1_after_ray_origin = t1 > t_min;
+        // let t2_after_ray_origin = t2 > t_min;
+        let t2_after_ray_origin = false;
 
         if t1_after_ray_origin || t2_after_ray_origin {
             let hit_position = if t1_after_ray_origin {
@@ -47,8 +50,8 @@ pub fn hit_sphere(sphere: &Sphere, ray: &Ray) -> Option<HitPoint> {
 
 impl Hittable for Sphere {
 
-    fn ray_intersaction(&self, ray: &Ray) -> Option<HitPoint> {
-        return hit_sphere(self, ray);
+    fn ray_intersaction(&self, ray: &Ray, t_min:f32, t_max:f32) -> Option<HitPoint> {
+        return hit_sphere(self, ray, t_min, t_max);
     }
 
 }

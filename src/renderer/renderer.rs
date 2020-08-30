@@ -54,7 +54,7 @@ impl Renderer {
             // color =  (hitpoint.normal + Vector3f::new(1f32, 1f32, 1f32)) * 0.5f32
         } else {
             for hittable in hittables {
-                let sphere_hitpoint = hittable.ray_intersaction(r);
+                let sphere_hitpoint = hittable.ray_intersaction(r, 0.001, 10000.0);
                 match sphere_hitpoint {
                     Some(hitpoint) => {
                         let new_target = hitpoint.position + hitpoint.normal + random_in_unit_sphere();
