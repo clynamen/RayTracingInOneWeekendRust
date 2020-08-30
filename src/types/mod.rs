@@ -16,6 +16,22 @@ pub fn scale_rgb8(color: Rgb8, scale: f32) -> Rgb8 {
     vector3f_to_rgb8(scale* rgb8_to_vector3f(color))
 }
 
+pub trait PointwiseSqrtExt {
+    fn pointwise_sqrt(&self) -> Self;
+}
+
+impl PointwiseSqrtExt for Vector3f {
+
+    fn pointwise_sqrt(&self) -> Vector3f {
+        Vector3f::new(
+            self.x.sqrt(),
+            self.y.sqrt(),
+            self.z.sqrt(),
+        )
+    }
+
+}
+
 pub fn vector3f_to_rgb8(v: Vector3f) -> Rgb8 {
     Rgb8::new( (v.x*255 as f32) as u8, 
                (v.y*255 as f32) as u8,

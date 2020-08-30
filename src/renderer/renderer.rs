@@ -3,7 +3,7 @@ use crate::image::image::Image;
 use crate::raycasting::ray::Ray;
 use crate::renderer::camera::Camera;
 use crate::types::{normal3f_to_rgb8, vector3f_to_rgb8, rgb8_to_vector3f};
-use crate::types::{Rgb8, Size2i, Vector2i, Vector3f, scale_rgb8};
+use crate::types::{Rgb8, Size2i, Vector2i, Vector3f, scale_rgb8, PointwiseSqrtExt };
 use std::boxed::Box;
 use std::vec::Vec;
 use rand::Rng;
@@ -90,9 +90,13 @@ impl Renderer {
                 let sample_color = self.eval_ray_color(&ray, &hittables, self.settings.max_depth);
                 pixel_color_vector += sample_color;
             }
-            let color_vector = pixel_color_vector / self.settings.antialiasing_samples as f32;
+            let color_vector : Vector3f = pixel_color_vector / self.settings.antialiasing_samples as f32;
+
+            // apply gamma 2 correction
+            let corrected_color_vector = color_vector.pointwise_sqrt();
+
             // println!("{}", color_vector);
-            color_vector
+            corrected_color_vector
         } else {
             let ray = camera.get_ray_from_image_xy(pixel_position);
             let color_vector = self.eval_ray_color(&ray, &hittables, self.settings.max_depth);
