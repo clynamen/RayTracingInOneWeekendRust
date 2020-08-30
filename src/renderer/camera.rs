@@ -51,7 +51,7 @@ impl Camera {
     }
 
     pub fn focal_length(&self) -> f32 {
-        1.0
+        0.7
     }
 
 }

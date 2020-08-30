@@ -31,9 +31,9 @@ impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
             settings: RendererSettings {
-                antialiasing_on: false,
+                antialiasing_on: true,
                 antialiasing_samples: 100,
-                max_depth: 3
+                max_depth: 50
             },
         }
     }
@@ -51,6 +51,7 @@ impl Renderer {
         let mut color = self.eval_background_color(r);
         if remaining_depth == 0 {
             color = Vector3f::new(0.0f32, 0.0f32, 0.0f32)
+            // color =  (hitpoint.normal + Vector3f::new(1f32, 1f32, 1f32)) * 0.5f32
         } else {
             for hittable in hittables {
                 let sphere_hitpoint = hittable.ray_intersaction(r);
@@ -61,9 +62,13 @@ impl Renderer {
                             origin: hitpoint.position, 
                             direction: new_target - hitpoint.position
                         };
-                        return (hitpoint.normal + Vector3f::new(1f32, 1f32, 1f32)) * 0.5f32
+                        // let normal_color = (hitpoint.normal + Vector3f::new(1f32, 1f32, 1f32)) * 0.5f32;
+                        let normal_color = Vector3f::zeros();
+                        // let normal_color = Vector3f::new(0.3f32, 0.3f32, 0.3f32);
                         // return Vector3f::new(1.0, 0.0, 0.0 )
-                        // color = self.eval_ray_color(&new_ray, hittables, remaining_depth-1) * 0.9f32;
+                        let reflected_color = self.eval_ray_color(&new_ray, hittables, remaining_depth-1) * 0.5f32;
+                        // let reflected_color = Vector3f::zeros();
+                        color = normal_color + reflected_color;
                     },
                     None => {}
                 }
@@ -85,10 +90,14 @@ impl Renderer {
                 let sample_color = self.eval_ray_color(&ray, &hittables, self.settings.max_depth);
                 pixel_color_vector += sample_color;
             }
-            pixel_color_vector / self.settings.antialiasing_samples as f32
+            let color_vector = pixel_color_vector / self.settings.antialiasing_samples as f32;
+            // println!("{}", color_vector);
+            color_vector
         } else {
             let ray = camera.get_ray_from_image_xy(pixel_position);
-            self.eval_ray_color(&ray, &hittables, self.settings.max_depth)
+            let color_vector = self.eval_ray_color(&ray, &hittables, self.settings.max_depth);
+            // println!("{}", color_vector);
+            color_vector
         };
         vector3f_to_rgb8(color_vector)
     }
