@@ -1,10 +1,13 @@
 use crate::types::Vector3f;
 use crate::raycasting::ray::{Ray, HitPoint};
 use super::hittable::Hittable;
+use crate::material::material::Material;
+
 
 pub struct Sphere {
    pub origin: Vector3f,
-   pub radius: f32
+   pub radius: f32,
+   pub material: Option<Box<dyn Material>>
 }
 
 pub fn hit_sphere(sphere: &Sphere, ray: &Ray, t_min:f32, t_max:f32) -> Option<HitPoint> {
@@ -52,6 +55,10 @@ impl Hittable for Sphere {
 
     fn ray_intersaction(&self, ray: &Ray, t_min:f32, t_max:f32) -> Option<HitPoint> {
         return hit_sphere(self, ray, t_min, t_max);
+    }
+
+    fn material(&self) -> &Option<Box<dyn Material>> {
+        &self.material
     }
 
 }

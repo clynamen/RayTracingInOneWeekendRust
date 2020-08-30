@@ -4,18 +4,9 @@ use crate::raycasting::ray::Ray;
 use crate::renderer::camera::Camera;
 use crate::types::{normal3f_to_rgb8, vector3f_to_rgb8, rgb8_to_vector3f};
 use crate::types::{Rgb8, Size2i, Vector2i, Vector3f, scale_rgb8, PointwiseSqrtExt };
+use rand::Rng;
 use std::boxed::Box;
 use std::vec::Vec;
-use rand::Rng;
-
-pub fn random_in_unit_sphere() -> Vector3f {
-    let mut rng = rand::thread_rng();
-
-    let x = rng.gen_range(-1.0, 1.0);
-    let y = rng.gen_range(-1.0, 1.0);
-    let z = rng.gen_range(-1.0, 1.0);
-    Vector3f::new(x, y, z).normalize()
-}
 
 pub struct RendererSettings {
     antialiasing_on: bool,
@@ -49,28 +40,27 @@ impl Renderer {
 
     fn eval_ray_color(&self, r: &Ray, hittables: &Vec<Box<dyn Hittable>>, remaining_depth: u32) -> Vector3f {
         let mut color = self.eval_background_color(r);
+
         if remaining_depth == 0 {
-            color = Vector3f::new(0.0f32, 0.0f32, 0.0f32)
+            color = Vector3f::zeros();
             // color =  (hitpoint.normal + Vector3f::new(1f32, 1f32, 1f32)) * 0.5f32
         } else {
             for hittable in hittables {
                 let sphere_hitpoint = hittable.ray_intersaction(r, 0.001, 10000.0);
                 match sphere_hitpoint {
                     Some(hitpoint) => {
-                        let new_target = hitpoint.position + hitpoint.normal + random_in_unit_sphere();
-                        let new_ray = Ray{
-                            origin: hitpoint.position, 
-                            direction: new_target - hitpoint.position
-                        };
-                        // let normal_color = (hitpoint.normal + Vector3f::new(1f32, 1f32, 1f32)) * 0.5f32;
-                        let normal_color = Vector3f::zeros();
-                        // let normal_color = Vector3f::new(0.3f32, 0.3f32, 0.3f32);
-                        // return Vector3f::new(1.0, 0.0, 0.0 )
-                        let reflected_color = self.eval_ray_color(&new_ray, hittables, remaining_depth-1) * 0.5f32;
-                        // let reflected_color = Vector3f::zeros();
-                        color = normal_color + reflected_color;
+                        let material = hittable.material().as_ref().unwrap();
+                        match material.scatter(r, &hitpoint)  {
+                            Some((attenuation, scattered)) => {
+                                let next_color = self.eval_ray_color(&scattered, hittables, remaining_depth-1);
+                                color = attenuation.component_mul(&next_color);
+                            },
+                            None => {
+                                color = Vector3f::zeros()
+                            }
+                        }
                     },
-                    None => {}
+                    None=> ()
                 }
             }
         }
