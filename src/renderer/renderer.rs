@@ -23,7 +23,7 @@ impl Renderer {
         Renderer {
             settings: RendererSettings {
                 antialiasing_on: true,
-                antialiasing_samples: 100,
+                antialiasing_samples: 50,
                 max_depth: 50
             },
         }

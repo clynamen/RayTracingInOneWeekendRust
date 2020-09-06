@@ -32,10 +32,12 @@ pub fn hit_sphere(sphere: &Sphere, ray: &Ray, t_min:f32, t_max:f32) -> Option<Hi
             let hit_position = if t1_after_ray_origin {
                 t1_hit_position
             } else {
+                assert!(false);
                 t2_hit_position
             };
-            let normal = (hit_position - sphere.origin).normalize();
-            let is_front_face = normal.dot(&ray.direction) > 0f32;
+            let outward_normal = (hit_position - sphere.origin).normalize();
+            let is_front_face = outward_normal.dot(&ray.direction) < 0f32;
+            let normal = if is_front_face {outward_normal} else {-outward_normal}; 
             let hitpoint = HitPoint{
                 position: hit_position,
                 normal: normal,

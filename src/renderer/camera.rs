@@ -11,8 +11,10 @@ pub struct Camera {
 
 impl Camera {
 
-    pub fn new(width: i32) -> Camera {
-        let viewport = Viewport::new_by_width(16.0 / 9.0, width);
+    pub fn new(width: i32, height: i32) -> Camera {
+        let aspect_ratio = width as f32 / height as f32;
+        // let aspect_ratio = 1f32;
+        let viewport = Viewport::new_by_width(aspect_ratio, width);
         Camera {
             origin: Vector3f::new(0.0f32, 0.0f32, 0f32),
             viewport: viewport,
@@ -51,7 +53,7 @@ impl Camera {
     }
 
     pub fn focal_length(&self) -> f32 {
-        0.7
+        0.6
     }
 
 }

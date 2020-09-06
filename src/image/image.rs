@@ -31,9 +31,14 @@ impl Image {
         assert!(position.x >= 0 && position.x < self.size.width());
         let image_size = self.size.height() * self.size.width();
         let pixel_index = position.y * self.size.width() + position.x;
-        self.data[(0*image_size+pixel_index) as usize] = rgb.r;
-        self.data[(1*image_size+pixel_index) as usize] = rgb.g;
-        self.data[(2*image_size+pixel_index) as usize] = rgb.b;
+
+        // self.data[(0*image_size+pixel_index) as usize] = rgb.r;
+        // self.data[(1*image_size+pixel_index) as usize] = rgb.g;
+        // self.data[(2*image_size+pixel_index) as usize] = rgb.b;
+
+        self.data[(pixel_index*3+0) as usize] = rgb.r;
+        self.data[(pixel_index*3+1) as usize] = rgb.g;
+        self.data[(pixel_index*3+2) as usize] = rgb.b;
     }
 
 }

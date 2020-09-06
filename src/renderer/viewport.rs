@@ -9,7 +9,7 @@ impl Viewport {
 
     /// maps pixel x from (0, image_height) to (0.5, -0.5)
     pub fn to_image_v(&self, image_y: f32) -> f32 {
-        (image_y as f32 / self.image_height() as f32 - 0.5) * -1.0
+        (image_y as f32 / self.image_height() as f32 - 0.5) * -1.0 
     }
 
     /// maps pixel x from (0, image_width) to (-0.5, 0.5)
