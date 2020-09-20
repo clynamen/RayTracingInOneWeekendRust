@@ -27,7 +27,7 @@ use piston_window::*;
 use piston_image::ImageBuffer;
 use piston_image::buffer::ConvertBuffer;
 use std::thread;
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Sender, Receiver};
 
 type RgbImageU8Vec = ImageBuffer::<piston_image::Rgb<u8>, std::vec::Vec<u8>>;
 type RgbaImageU8Vec = ImageBuffer::<piston_image::Rgba<u8>, std::vec::Vec<u8>>;
@@ -44,42 +44,83 @@ fn rgb2rgba(src: RgbImageU8Vec) -> RgbaImageU8Vec {
     dest
 }
 
-fn main() {
-    let camera_width : u32 = 200;
-    let camera_height: u32 = 120;
-    let camera_size = Vector2i::new(camera_width as i32, camera_height as i32);
+use std::collections::HashSet;
 
-    let mut window: PistonWindow = 
-        WindowSettings::new("renderer", [camera_width, camera_height])
-        .exit_on_esc(true).build().unwrap();
+struct UserInput {
+    pressed_keys: HashSet<Key>,
+    exit_requested: bool
+}
 
-    let game: Game = Game::new(camera_size);
-    // Create a simple streaming channel
-    let (renderer_tx, renderer_rx) = channel();
+impl UserInput {
+    pub fn new() -> UserInput {
+        UserInput {
+            pressed_keys: HashSet::new(),
+            exit_requested: false
+        }
+    }
+}
 
+fn start_render_thread(user_input_rx: Receiver<UserInput>,
+        renderer_framebuffer_tx: Sender<RgbaImageU8Vec>,
+        game_conf: GameConf) -> std::thread::JoinHandle<()> {
+    let game: Game = Game::new(game_conf.camera_size);
     let renderer_thread = thread::spawn( move || {
-        while true {
+        let mut running = true;
+        while running {
+            if let Ok(user_input) = user_input_rx.try_recv() {
+                if user_input.exit_requested {
+                    running = false;
+                    break;
+                }
+            }
+
             let rendered_image = game.render();
             println!("rendered!");
             let image_buffer = renderer_image_to_piston_imagebuffer(rendered_image);
             let image_buffer_rgba = rgb2rgba(image_buffer);
-            renderer_tx.send(image_buffer_rgba);
+            renderer_framebuffer_tx.send(image_buffer_rgba);
         }
+        println!("exit from render thread");
     });
+    renderer_thread
+}
 
-    
+
+struct GameConf{
+    camera_size: Vector2i
+}
+
+fn main_thread(mut window: PistonWindow,
+    user_input_tx: Sender<UserInput>,
+    renderer_framebuffer_rx: Receiver<RgbaImageU8Vec>) {
+    let mut running = true;
+
     let mut texture_context = TextureContext {
         factory: window.factory.clone(),
         encoder: window.factory.create_command_buffer().into()
     };
 
     while let Some(e) = window.next() {
-        // let rendered_image = game.render();
+        if !running  {
+            break
+        }
+
+        let mut user_input = UserInput::new();
+
+        if let Some(Button::Keyboard(key)) = e.press_args() {
+            user_input.pressed_keys.insert(key);
+        }
+        if user_input.pressed_keys.contains(&Key::Escape) {
+            println!("exiting from main thread");
+            running = false;
+            user_input.exit_requested = true;
+            user_input_tx.send(user_input);
+        }
+
+
+
         window.draw_2d(&e, |c, g, _device| {
-            // rectangle([1.0, 0.0, 0.0, 1.0], // red
-            //           [0.0, 0.0, 100.0, 100.0],
-            //           c.transform, g);
-            match renderer_rx.try_recv() {
+            match renderer_framebuffer_rx.try_recv() {
                 Ok(image) => {
                     println!("received rendered image");
                     clear([1.0; 4], g);
@@ -96,6 +137,37 @@ fn main() {
             }
         });
     }
+
+}
+
+fn get_camera_size() -> Vector2i {
+    let camera_width : u32 = 200;
+    let camera_height: u32 = 120;
+    let camera_size = Vector2i::new(camera_width as i32, camera_height as i32);
+    camera_size
+}
+
+fn main() {
+    let camera_size = get_camera_size();
+
+    let mut window: PistonWindow = 
+        WindowSettings::new("renderer",
+        [camera_size.x as u32, camera_size.y as u32])
+        .exit_on_esc(true).build().unwrap();
+
+    let game_conf = GameConf { camera_size };
+
+    let (renderer_framebuffer_tx, renderer_framebuffer_rx) = channel();
+    let (user_input_tx, user_input_rx) = channel::<UserInput>();
+
+    let renderer_thread = start_render_thread(
+        user_input_rx, renderer_framebuffer_tx, game_conf
+    );
+
+
+    main_thread(window, user_input_tx, renderer_framebuffer_rx);
+
+    renderer_thread.join();
 }
 
 struct Game {
