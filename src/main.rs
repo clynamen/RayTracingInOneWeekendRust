@@ -90,11 +90,55 @@ struct GameConf{
     camera_size: Vector2i
 }
 
+fn generate_user_input(e: &Event) -> UserInput {
+    let mut user_input = UserInput::new();
+
+    if let Some(Button::Keyboard(key)) = e.press_args() {
+        user_input.pressed_keys.insert(key);
+    }
+
+    if user_input.pressed_keys.contains(&Key::Escape) {
+        println!("exiting from main thread");
+        user_input.exit_requested = true;
+    }
+
+    user_input
+}
+
+
+type MainTextureContext = piston_window::TextureContext<
+    gfx_device_gl::Factory, 
+    gfx_device_gl::Resources, 
+    gfx_device_gl::CommandBuffer>;
+
+fn draw_window(window: &mut PistonWindow, e: &Event, 
+        renderer_framebuffer_rx: &Receiver<RgbaImageU8Vec>,
+        texture_context: &mut MainTextureContext) {
+
+    window.draw_2d(e, |c, g, _device| {
+        match renderer_framebuffer_rx.try_recv() {
+            Ok(image) => {
+                println!("received rendered image");
+                clear([1.0; 4], g);
+                let img = Image::new().rect(rectangle_by_corners(0.0, 0.0,
+                    image.width().into(), 
+                    image.height().into()));
+                let texture_settings = TextureSettings::new();
+                let texture = Texture::from_image(texture_context, &image, &texture_settings ).unwrap();
+                img.draw(&texture, &c.draw_state, c.transform.scale(5.0, 5.0), g);
+            },
+            Err(e) => {
+
+            }
+        }
+    });
+}
+
 fn main_thread(mut window: PistonWindow,
     user_input_tx: Sender<UserInput>,
     renderer_framebuffer_rx: Receiver<RgbaImageU8Vec>) {
-    let mut running = true;
 
+    let mut running = true;
     let mut texture_context = TextureContext {
         factory: window.factory.clone(),
         encoder: window.factory.create_command_buffer().into()
@@ -105,37 +149,15 @@ fn main_thread(mut window: PistonWindow,
             break
         }
 
-        let mut user_input = UserInput::new();
+        let user_input = generate_user_input(&e);
 
-        if let Some(Button::Keyboard(key)) = e.press_args() {
-            user_input.pressed_keys.insert(key);
-        }
-        if user_input.pressed_keys.contains(&Key::Escape) {
+        if user_input.exit_requested {
             println!("exiting from main thread");
             running = false;
-            user_input.exit_requested = true;
             user_input_tx.send(user_input);
         }
 
-
-
-        window.draw_2d(&e, |c, g, _device| {
-            match renderer_framebuffer_rx.try_recv() {
-                Ok(image) => {
-                    println!("received rendered image");
-                    clear([1.0; 4], g);
-                    let img = Image::new().rect(rectangle_by_corners(0.0, 0.0,
-                        image.width().into(), 
-                        image.height().into()));
-                    let texture_settings = TextureSettings::new();
-                    let texture = Texture::from_image(&mut texture_context, &image, &texture_settings ).unwrap();
-                    img.draw(&texture, &c.draw_state, c.transform.scale(5.0, 5.0), g);
-                },
-                Err(e) => {
-
-                }
-            }
-        });
+        draw_window(&mut window, &e, &renderer_framebuffer_rx, &mut texture_context);
     }
 
 }

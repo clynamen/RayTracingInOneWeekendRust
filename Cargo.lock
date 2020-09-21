@@ -1191,6 +1191,7 @@ name = "ray_tracing_in_one_weekend_rust"
 version = "0.1.0"
 dependencies = [
  "color-rs",
+ "gfx_device_gl",
  "image",
  "nalgebra",
  "piston",
