@@ -22,6 +22,10 @@ impl Camera {
         }
     }
 
+    pub fn fps_move(&mut self, wasd_vector: Vector3f) {
+        self.origin += wasd_vector;
+    }
+
     pub fn get_ray_from_image_xy(&self, xy: Vector2i) -> Ray {
         self.get_ray_from_image_yx(xy.y as f32, xy.x as f32)
     }

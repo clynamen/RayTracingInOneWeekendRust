@@ -92,6 +92,8 @@ fn start_render_thread(user_input_rx: Receiver<UserInput>,
             }
 
 
+
+            println!("{:?}", game_state.load().camera.origin);
             let rendered_image = game.render(game_state.load().as_ref());
             println!("rendered!");
             let image_buffer = renderer_image_to_piston_imagebuffer(rendered_image);
@@ -148,8 +150,33 @@ fn draw_window(window: &mut PistonWindow, e: &Event,
     });
 }
 
+fn make_wasd_vector(user_input: &UserInput) -> Vector3f {
+    let mut wasd_vector = Vector3f::new(0.0, 0.0, 0.0);
+    if user_input.pressed_keys.contains(&Key::W) {
+        wasd_vector.z += 1.0;
+    } else if user_input.pressed_keys.contains(&Key::S) {
+        wasd_vector.z -= 1.0;
+    }
+
+    if(user_input.pressed_keys.contains(&Key::A)) {
+        wasd_vector.x += 1.0;
+    } else if (user_input.pressed_keys.contains(&Key::D)) {
+        wasd_vector.x -= 1.0;
+    }
+
+    wasd_vector
+}
+
+fn update_camera(user_input: &UserInput, camera: Camera) -> Camera {
+    let mut new_camera = camera;
+    let mut wasd_vector = make_wasd_vector(user_input);
+    new_camera.fps_move(wasd_vector);
+    new_camera
+}
+
 fn update_game_state(user_input: &UserInput, previous_game_state: &GameState) -> GameState {
-    let new_game_state = dyn_clone::clone(previous_game_state);
+    let mut new_game_state = dyn_clone::clone(previous_game_state);
+    new_game_state.camera = update_camera(user_input, new_game_state.camera);
     new_game_state
 }
 
@@ -173,7 +200,7 @@ fn main_thread(mut window: PistonWindow,
 
         let previous_game_state = game_state.load();
         let new_game_state = update_game_state(&user_input, previous_game_state.as_ref()); 
-        // game_state.store(std::sync::Arc::new(new_game_state));
+        game_state.store(std::sync::Arc::new(new_game_state));
 
         if user_input.exit_requested {
             println!("exiting from main thread");
