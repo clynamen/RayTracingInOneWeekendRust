@@ -3,7 +3,7 @@ use crate::raycasting::ray::Ray;
 use crate::types::{Vector3f};
 use crate::geom::rand_geom::random_in_unit_sphere;
 
-pub trait Material {
+pub trait Material : Send{
     fn scatter  (&self,
         ray: &Ray, rec: &HitPoint) -> Option<(Vector3f, Ray)>;
 }

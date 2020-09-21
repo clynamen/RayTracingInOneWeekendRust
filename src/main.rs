@@ -31,6 +31,10 @@ use std::sync::mpsc::{channel, Sender, Receiver};
 
 type RgbImageU8Vec = ImageBuffer::<piston_image::Rgb<u8>, std::vec::Vec<u8>>;
 type RgbaImageU8Vec = ImageBuffer::<piston_image::Rgba<u8>, std::vec::Vec<u8>>;
+type MainTextureContext = piston_window::TextureContext<
+    gfx_device_gl::Factory, 
+    gfx_device_gl::Resources, 
+    gfx_device_gl::CommandBuffer>;
 
 fn renderer_image_to_piston_imagebuffer(src: image::image::Image) -> RgbImageU8Vec{
     let dest = RgbImageU8Vec::from_raw(
@@ -62,8 +66,11 @@ impl UserInput {
 
 fn start_render_thread(user_input_rx: Receiver<UserInput>,
         renderer_framebuffer_tx: Sender<RgbaImageU8Vec>,
-        game_conf: GameConf) -> std::thread::JoinHandle<()> {
-    let game: Game = Game::new(game_conf.camera_size);
+        game_conf: GameConf,
+        initial_game_state: GameState) -> std::thread::JoinHandle<()> {
+
+    let game: Game = Game::new(initial_game_state);
+
     let renderer_thread = thread::spawn( move || {
         let mut running = true;
         while running {
@@ -106,10 +113,6 @@ fn generate_user_input(e: &Event) -> UserInput {
 }
 
 
-type MainTextureContext = piston_window::TextureContext<
-    gfx_device_gl::Factory, 
-    gfx_device_gl::Resources, 
-    gfx_device_gl::CommandBuffer>;
 
 fn draw_window(window: &mut PistonWindow, e: &Event, 
         renderer_framebuffer_rx: &Receiver<RgbaImageU8Vec>,
@@ -169,10 +172,17 @@ fn get_camera_size() -> Vector2i {
     camera_size
 }
 
+fn make_initial_game_state(camera_size: Vector2i) -> GameState {
+    GameState {
+        camera: Camera::new(camera_size.x, camera_size.y),
+        hittables: make_default_hittables()
+    }
+}
+
 fn main() {
     let camera_size = get_camera_size();
 
-    let mut window: PistonWindow = 
+    let window: PistonWindow = 
         WindowSettings::new("renderer",
         [camera_size.x as u32, camera_size.y as u32])
         .exit_on_esc(true).build().unwrap();
@@ -182,35 +192,38 @@ fn main() {
     let (renderer_framebuffer_tx, renderer_framebuffer_rx) = channel();
     let (user_input_tx, user_input_rx) = channel::<UserInput>();
 
-    let renderer_thread = start_render_thread(
-        user_input_rx, renderer_framebuffer_tx, game_conf
-    );
+    let initial_game_state = make_initial_game_state(camera_size);
 
+    let renderer_thread = start_render_thread(
+        user_input_rx, renderer_framebuffer_tx,
+        game_conf, initial_game_state
+    );
 
     main_thread(window, user_input_tx, renderer_framebuffer_rx);
 
-    renderer_thread.join();
+    renderer_thread.join().unwrap();
 }
 
 struct Game {
     renderer: renderer::renderer::Renderer,
+    game_state: GameState
+}
+
+struct GameState{
+    hittables: Vec<Box<dyn Hittable>>,
     camera: Camera
 }
 
-impl Game {
-
-    pub fn new(camera_size: Vector2i) -> Game {
-        let renderer = renderer::renderer::Renderer::new();
-        let camera = Camera::new(camera_size.x, camera_size.y);
-
-        Game {
-            renderer,
-            camera
+impl GameState {
+    pub fn new(camera: Camera) -> GameState {
+        GameState {
+            hittables: Vec::new(),
+            camera: camera
         }
     }
+}
 
-    pub fn get_hittables(&self) -> Vec<Box<dyn Hittable>>  {
-
+pub fn make_default_hittables() -> Vec<Box<dyn Hittable>>  {
         let material_ground = Lambertian::new(Vector3f::new(0.8, 0.8, 0.0));
         let material_center = Lambertian::new(Vector3f::new(0.7, 0.3, 0.3));
         // let material_left   = Metal::new(Vector3f::new(0.8, 0.8, 0.8), 0.3);
@@ -247,11 +260,27 @@ impl Game {
         ];
 
         hittables
+}
+
+
+impl Game {
+
+    pub fn new(game_state: GameState) -> Game {
+        let renderer = renderer::renderer::Renderer::new();
+
+        Game {
+            renderer,
+            game_state,
+        }
+    }
+
+    pub fn get_hittables(&self) -> &Vec<Box<dyn Hittable>>  {
+        &self.game_state.hittables
     }
 
     pub fn render(&self) -> image::image::Image {
         let hittables = self.get_hittables();
-        let image = self.renderer.run(&self.camera, &hittables);
+        let image = self.renderer.run(&self.game_state.camera, &hittables);
         ppm::save_image_to_ppm(
             image.data.as_slice(),
             image.size.width(),
