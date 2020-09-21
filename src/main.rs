@@ -1,6 +1,8 @@
 extern crate color;
 extern crate nalgebra;
 extern crate rand;
+extern crate arc_swap;
+extern crate dyn_clone;
 
 mod geom;
 mod image;
@@ -10,11 +12,13 @@ mod renderer;
 mod types;
 mod material;
 
+use arc_swap::ArcSwap;
 use crate::geom::hittable::Hittable;
 use crate::geom::sphere::Sphere;
 use crate::types::{Vector3f, Vector2i};
 use crate::renderer::camera::Camera;
 use crate::material::material::{Lambertian, Metal, Dielectric};
+
 
 extern crate piston_window;
 extern crate image as piston_image;
@@ -50,6 +54,12 @@ fn rgb2rgba(src: RgbImageU8Vec) -> RgbaImageU8Vec {
 
 use std::collections::HashSet;
 
+type ArcMutex<T> = std::sync::Arc<std::sync::Mutex<T>>;
+
+fn make_arc_mutex<T>(value: T) -> ArcMutex<T>{
+    std::sync::Arc::new(std::sync::Mutex::new(value))
+}
+
 struct UserInput {
     pressed_keys: HashSet<Key>,
     exit_requested: bool
@@ -67,9 +77,9 @@ impl UserInput {
 fn start_render_thread(user_input_rx: Receiver<UserInput>,
         renderer_framebuffer_tx: Sender<RgbaImageU8Vec>,
         game_conf: GameConf,
-        initial_game_state: GameState) -> std::thread::JoinHandle<()> {
+        game_state: ArcSwap<GameState>) -> std::thread::JoinHandle<()> {
 
-    let game: Game = Game::new(initial_game_state);
+    let game: Game = Game::new();
 
     let renderer_thread = thread::spawn( move || {
         let mut running = true;
@@ -81,7 +91,8 @@ fn start_render_thread(user_input_rx: Receiver<UserInput>,
                 }
             }
 
-            let rendered_image = game.render();
+
+            let rendered_image = game.render(game_state.load().as_ref());
             println!("rendered!");
             let image_buffer = renderer_image_to_piston_imagebuffer(rendered_image);
             let image_buffer_rgba = rgb2rgba(image_buffer);
@@ -137,9 +148,15 @@ fn draw_window(window: &mut PistonWindow, e: &Event,
     });
 }
 
+fn update_game_state(user_input: &UserInput, previous_game_state: &GameState) -> GameState {
+    let new_game_state = dyn_clone::clone(previous_game_state);
+    new_game_state
+}
+
 fn main_thread(mut window: PistonWindow,
     user_input_tx: Sender<UserInput>,
-    renderer_framebuffer_rx: Receiver<RgbaImageU8Vec>) {
+    renderer_framebuffer_rx: Receiver<RgbaImageU8Vec>,
+    game_state: ArcSwap<GameState>) {
 
     let mut running = true;
     let mut texture_context = TextureContext {
@@ -153,6 +170,10 @@ fn main_thread(mut window: PistonWindow,
         }
 
         let user_input = generate_user_input(&e);
+
+        let previous_game_state = game_state.load();
+        let new_game_state = update_game_state(&user_input, previous_game_state.as_ref()); 
+        // game_state.store(std::sync::Arc::new(new_game_state));
 
         if user_input.exit_requested {
             println!("exiting from main thread");
@@ -193,23 +214,28 @@ fn main() {
     let (user_input_tx, user_input_rx) = channel::<UserInput>();
 
     let initial_game_state = make_initial_game_state(camera_size);
+    // let game_state = make_arc_mutex(initial_game_state);
+    let game_state = ArcSwap::new(std::sync::Arc::new(initial_game_state));
 
     let renderer_thread = start_render_thread(
         user_input_rx, renderer_framebuffer_tx,
-        game_conf, initial_game_state
+        game_conf, game_state.clone(),
     );
 
-    main_thread(window, user_input_tx, renderer_framebuffer_rx);
+    main_thread(window, user_input_tx, 
+        renderer_framebuffer_rx, 
+        game_state);
 
     renderer_thread.join().unwrap();
 }
 
 struct Game {
-    renderer: renderer::renderer::Renderer,
-    game_state: GameState
+    renderer: renderer::renderer::Renderer
 }
 
-struct GameState{
+
+#[derive(Clone)]
+struct GameState {
     hittables: Vec<Box<dyn Hittable>>,
     camera: Camera
 }
@@ -265,22 +291,18 @@ pub fn make_default_hittables() -> Vec<Box<dyn Hittable>>  {
 
 impl Game {
 
-    pub fn new(game_state: GameState) -> Game {
+    pub fn new() -> Game {
         let renderer = renderer::renderer::Renderer::new();
 
         Game {
-            renderer,
-            game_state,
+            renderer
         }
     }
 
-    pub fn get_hittables(&self) -> &Vec<Box<dyn Hittable>>  {
-        &self.game_state.hittables
-    }
-
-    pub fn render(&self) -> image::image::Image {
-        let hittables = self.get_hittables();
-        let image = self.renderer.run(&self.game_state.camera, &hittables);
+    pub fn render(&self, game_state: &GameState) -> image::image::Image {
+        let hittables = &game_state.hittables;
+        let camera = &game_state.camera;
+        let image = self.renderer.run(camera, hittables);
         ppm::save_image_to_ppm(
             image.data.as_slice(),
             image.size.width(),

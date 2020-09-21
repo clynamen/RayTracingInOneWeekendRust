@@ -4,6 +4,7 @@ use super::hittable::Hittable;
 use crate::material::material::Material;
 
 
+#[derive(Clone)]
 pub struct Sphere {
    pub origin: Vector3f,
    pub radius: f32,

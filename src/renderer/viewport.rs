@@ -1,5 +1,6 @@
 use crate::types::{Vector3f};
 
+#[derive(Copy, Clone)]
 pub struct Viewport {
     width: i32,
     height: i32,

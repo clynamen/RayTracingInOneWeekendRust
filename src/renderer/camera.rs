@@ -4,6 +4,7 @@ use crate::types::Vector2i;
 use crate::types::Vector3f;
 use rand::Rng;
 
+#[derive(Copy, Clone)]
 pub struct Camera {
     pub origin: Vector3f,
     pub viewport: Viewport,

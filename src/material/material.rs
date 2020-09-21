@@ -2,12 +2,17 @@ use crate::raycasting::ray::HitPoint;
 use crate::raycasting::ray::Ray;
 use crate::types::{Vector3f};
 use crate::geom::rand_geom::random_in_unit_sphere;
+use dyn_clone::{clone_trait_object, DynClone};
 
-pub trait Material : Send{
+pub trait Material : Send + Sync + DynClone {
     fn scatter  (&self,
         ray: &Ray, rec: &HitPoint) -> Option<(Vector3f, Ray)>;
 }
 
+
+dyn_clone::clone_trait_object!(Material);
+
+#[derive(Clone)]
 pub struct Lambertian {
     albedo : Vector3f
 }
@@ -29,6 +34,7 @@ impl Material for Lambertian {
 
 }
 
+#[derive(Clone)]
 pub struct Metal {
     albedo : Vector3f,
     fuzziness: f32,
@@ -79,6 +85,7 @@ impl Material for Metal {
 
 }
 
+#[derive(Clone)]
 pub struct Dielectric {
     reflective_index: f32
 }
